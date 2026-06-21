@@ -1,12 +1,8 @@
 import requests
-params = {"userId": 2}
-response = requests.get(
-"https://jsonplaceholder.typicode.com/posts",
-params=params # becomes: /posts?userId=1
-)
-posts = response.json()
-print(f"Found {len(posts)} posts for user 1")
-for post in posts: # print first 3
-    print(f" - {post}")
-
-
+response = requests.get("https://jsonplaceholder.typicode.com/posts/99999")
+if response.status_code == 200:
+    print("Got data:", response.json())
+elif response.status_code == 404:
+    print("Not found")
+else:
+    print(f"Unexpected status: {response.status_code}")

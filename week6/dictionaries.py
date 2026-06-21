@@ -41,6 +41,7 @@ def merge_two_dictionaries(dict1: dict, dict2: dict):
     dict1.update(dict2)
     return dict1.copy()
 
+print(merge_two_dictionaries({"a":1,"b":2},{"a":1,"b":20}))
 # 6
 
 def filter_by_value(dicti, threshold):
