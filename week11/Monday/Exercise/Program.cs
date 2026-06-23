@@ -8,34 +8,33 @@ namespace ExerciseMonday
         static void Main()
         {
             List<Dictionary<string, string>> data = new List<Dictionary<string, string>>();
-            List<int> ids = new List<int>();
-            List<string> headings = new List<string>();
-            List<int> speeds = new List<int>();
-            //AddTrack(300, "hfj", ids, speeds, headings);
-            //AddTrack(250, "chaaa", ids, speeds, headings);
-            //AddTrack(180, "miau", ids, speeds, headings);
-            //Console.WriteLine(GetTrackByID(1, ids, speeds, headings));
-            //Console.WriteLine(GetTrackByID(2, ids, speeds, headings));
-            //Console.WriteLine(GetTrackByID(3, ids, speeds, headings));
-            //Console.WriteLine(DeleteTrack(3, ids, speeds, headings));
-            //Console.WriteLine(GetTrackByID(3, ids, speeds, headings));
-            //Console.WriteLine(GetAllTracks(ids, speeds, headings));
+            //AddTrack(250, "travle", data);
+            //AddTrack(320, "stopped", data);
+            //Console.WriteLine(GetTrackByID("2", data));
+            //DeleteTrack("2", data);
+            //Console.WriteLine(GetTrackByID("2", data));
         }
         static bool AddTrack(int speed, string heading, List<Dictionary<string, string>> data)
         {
-            int lastid = data.Count == 0 ? 1 : (int)data[^1]["id"] + 1;
-            string lastID = (string)lastid;
+            int lastid = new int();
+            if (data.Count > 0)
+            {
+                lastid = int.Parse(data[^1]["id"]);
+                lastid++;
+            }
+            else
+            {
+                lastid = 1;
+            }
+            string lastID = lastid.ToString();
+            string Speed = speed.ToString();
             Dictionary<string, string> track = new Dictionary<string, string>()
             {
                 {"id", lastID },
-                {"speed", speed },
+                {"speed", Speed },
                 {"heading", heading }
-            }
+            };
             data.Add(track);
-            //speeds.Add(speed);
-            //headings.Add(heading);
-            
-            //ids.Add(lastID);
             return true;
         }
         static bool DeleteTrack(string id, List<Dictionary<string, string>> data)
@@ -44,10 +43,7 @@ namespace ExerciseMonday
             {
                 if (data[i]["id"] == id)
                 {
-                    data.Remove(data[i])
-                    //speeds.Remove(speeds[i]);
-                    //headings.Remove(headings[i]);
-                    //ids.Remove(ids[i]);
+                    data.Remove(data[i]);
                     return true;
                 }
             }
@@ -59,18 +55,18 @@ namespace ExerciseMonday
             {
                 if (data[i]["id"] == id)
                 {
-                    string TrackByID = $"TrackID: {id}, Heading: {data[i]["headings"]}, speed: {data[i]["speeds"]}";
+                    string TrackByID = $"TrackID: {id}, Heading: {data[i]["heading"]}, speed: {data[i]["speed"]}";
                     return TrackByID;
                 }
             }
             return "not found";
         }
-        static List<string> GetAllTracks(List<int> ids, List<int> speeds, List<string> headings)
+        static List<string> GetAllTracks(List<Dictionary<string, string>> data)
         {
             List<string> AllTracks = new List<string>();
-            foreach (int i in ids)
+            foreach (Dictionary<string, string> i in data)
             {
-                AllTracks.Add(GetTrackByID(i, ids, speeds, headings));
+                AllTracks.Add(GetTrackByID(i["id"], data));
             }
             return AllTracks;
         }
