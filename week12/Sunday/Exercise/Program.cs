@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Transactions;
 
 namespace ExerciseSunday
 {
@@ -12,30 +13,53 @@ namespace ExerciseSunday
     {
         static void Main()
         {
-            BankAccount a = new BankAccount(1234, "Elazar", 200.0, "Saving");
-            a.Deposit(130.9);
-            a.Deposit(590.0);
-            a.Withdraw(300.8);
+            List<BankAccount> accounts = new List<BankAccount>();
+            BankAccount a = new BankAccount(1, "avi", 300, "Saving");
+            BankAccount b = new BankAccount(2, "elazar", 200, "Business");
+            BankAccount c = new BankAccount(3, "meair", 299);
+            BankAccount d = new BankAccount(4, "eliau");
+            BankAccount e = new BankAccount(5, "shalom", 600, "Saving");
+            BankAccount f = new BankAccount(6, "muchamad");
+            BankAccount g = new BankAccount(7, "", -49, "demo");
+            accounts.Add(a); accounts.Add(b); accounts.Add(c); accounts.Add(d); accounts.Add(e); accounts.Add(f); accounts.Add(g);
+            foreach (BankAccount ones in accounts)
+            {
+                Console.WriteLine($"at first: {ones.Balance}");
+            }
+            a.Deposit(100);
+            b.Deposit(900);
+            c.Withdraw(50);
+            e.Withdraw(300);
+            c.Withdraw(700);
+            f.Deactivate();
+            f.Deposit(70);
+            f.Activate();
+            foreach (BankAccount ones in accounts)
+            {
+                Console.WriteLine($"befor: {ones.Balance}");
+                ones.ApplyInterest();
+                Console.WriteLine($"after: {ones.Balance}");
+            }
+            Console.WriteLine($"from {a.OwnerName} balance befor {a.Balance} to {b.OwnerName} balance befor {b.Balance}");
+            BankAccount.Transfer(a, b, 200);
+            Console.WriteLine($"from {a.OwnerName} balance after {a.Balance} to {b.OwnerName} balance after {b.Balance}");
             a.PrintTransactionHistory();
-            Console.WriteLine(a);
-        }
+            b.PrintTransactionHistory();
+            foreach (BankAccount ones in accounts)
+            {
+                Console.WriteLine(ones);
+            }
+            }
     }
     class BankAccount
     {
         private int _accountNumber { get; }
-        private string _ownerName { get; set; }
-        private double _balance { get; set; }
-        private string _accountType { get; set; }
-        private bool _isActive { get; set; }
-        private List<string> _transactionHistory { get; set; }
-        public List<string> TransactionHistory
-        {
-            get => _transactionHistory;
-            set
-            {
-                new List<string>();
-            }
-        }
+        private string _ownerName;
+        private double _balance;
+        private string _accountType;
+        private bool _isActive;
+        private List<string> _transactionHistory;
+        
         public string OwnerName
         {
             get => _ownerName;
@@ -77,9 +101,7 @@ namespace ExerciseSunday
             get => _isActive;
             set
             {
-                if (!value)
-                    _isActive = true;
-                else _isActive = value;
+               _isActive = value;
             }
         }
         public BankAccount(int accountNumber, string ownerName, double balance, string accountType)
@@ -88,11 +110,12 @@ namespace ExerciseSunday
             OwnerName = ownerName;
             Balance = balance;
             AccountType = accountType;
-            IsActive = _isActive;
-            _transactionHistory = TransactionHistory;
+            IsActive = true;
+            _transactionHistory = new List<string>();
 
         }
         public BankAccount(int accountNumber, string ownerName) : this(accountNumber, ownerName, 0.0, "Checking") { }
+        public BankAccount(int accountNumber, string ownerName, double initialDeposit) : this(accountNumber, ownerName, initialDeposit, "Checking") { }
         public override string ToString()
             => $"Account #[{_accountNumber}] | Owner: [{_ownerName}] | Balance: $[{ _balance.ToString("F2")}] | Type: [{_accountType}]";
         public void Deposit(double amount)
@@ -127,7 +150,7 @@ namespace ExerciseSunday
         }
         public void PrintTransactionHistory()
         {
-            foreach (string Transaction in TransactionHistory)
+            foreach (string Transaction in _transactionHistory)
             {
                 Console.WriteLine(Transaction);
             }
@@ -139,6 +162,20 @@ namespace ExerciseSunday
         public void Deactivate()
         {
             IsActive = false;
+        }
+        public static bool Transfer(BankAccount from, BankAccount to, double amount)
+        {
+            if (from.IsActive && to.IsActive && amount > 0 && from.Balance >= amount)
+            {
+                from.Balance -= amount;
+                to.Balance += amount;
+                from._transactionHistory.Add($"{amount} transfer to {to._accountNumber}");
+                to._transactionHistory.Add($"{amount} transfer from {from._accountNumber}");
+                return true;
+            }
+            else Console.WriteLine("canno't transfer");
+            return false;
+            
         }
     }
 }
