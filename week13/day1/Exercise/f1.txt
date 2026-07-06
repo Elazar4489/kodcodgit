@@ -1,0 +1,4 @@
+Image 1: 30.9% cloud [EO]
+Image 2: 40% cloud [SAR]
+Image 3: 11.6% cloud [IR]
+Image 4: 11.6% cloud [IRR]
