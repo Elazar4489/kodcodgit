@@ -1,7 +1,7 @@
 ﻿using System;
 namespace ExerciseTuesday
 {
-    public enum Importances 
+    enum Importances 
     { 
         Friendly, 
         Hostile, 
@@ -14,7 +14,7 @@ namespace ExerciseTuesday
             List<string> ids = new List<string>();
             List<string> levels = new List<string>();
             List<double> powers = new List<double>();
-            bool flag = false; 
+            bool flag = true; 
             while (flag)
             {
                 Console.WriteLine("1. log a new transmission\n\r" +
@@ -48,6 +48,15 @@ namespace ExerciseTuesday
                         UpdateLevel(index, power, powers);
                     }
                 }
+                if (choice == "3")
+                {
+                    GetAll(ids, levels, powers);
+                }
+                if (choice == "4")
+                {
+                    flag = false;
+                }
+                
             }
         }
         static bool CheckLevel(string importance)
@@ -127,5 +136,18 @@ namespace ExerciseTuesday
             powers[index] = power;
             return "done";
         }
+        static List<string> GetAll(List<string> ids, List<string> levels, List<double> powers)
+        {
+            List<string> allData = new List<string>();
+            for (int i = 0; i < ids.Count; i++)
+            {
+                string correctId = $"id: {ids[i]}, level: {levels[i]}, power: {powers[i]}";
+
+                Console.WriteLine(correctId);
+                allData.Add(correctId);
+            }
+            return allData;
+        }
+        
     }
 }
