@@ -1,0 +1,215 @@
+using System.IO;
+using Microsoft.Extensions.Logging;
+
+namespace WeatherKafkaService.FileMonitoring;
+
+public class WeatherFileWatcher
+{
+    private readonly ILogger<WeatherFileWatcher> _logger;
+    private readonly AlertProcessor _alertProcessor;
+
+    private readonly string _rootPath;
+
+    private readonly List<FileSystemWatcher> _watchers = new();
+
+    public WeatherFileWatcher(
+        ILogger<WeatherFileWatcher> logger,
+        AlertProcessor alertProcessor)
+    {
+        _logger = logger;
+        _alertProcessor = alertProcessor;
+
+        _rootPath = @"C:\Weather";
+    }
+
+    public void Start()
+    {
+        _logger.LogInformation(
+            "Starting Weather File Watcher...");
+
+        if (!Directory.Exists(_rootPath))
+        {
+            _logger.LogError(
+                "Root directory does not exist: {Path}",
+                _rootPath);
+
+            return;
+        }
+
+        // מוצאים את 4 תיקיות הקטגוריה
+        var categories = Directory.GetDirectories(_rootPath);
+
+        foreach (var categoryPath in categories)
+        {
+            CreateWatcher(categoryPath);
+        }
+
+        _logger.LogInformation(
+            "Watching {Count} categories.",
+            categories.Length);
+    }
+
+    private void CreateWatcher(string categoryPath)
+    {
+        var watcher = new FileSystemWatcher();
+
+        watcher.Path = categoryPath;
+
+        // אנחנו מעוניינים בקבצים שנוצרים
+        watcher.NotifyFilter = NotifyFilters.FileName;
+
+        // חשוב:
+        // אנחנו רוצים לראות גם את התיקיות שנוצרות
+        // וגם את הקבצים שבתוכן
+        watcher.Filter = "*";
+
+        watcher.IncludeSubdirectories = true;
+
+        watcher.Created += OnCreated;
+
+        watcher.Error += OnError;
+
+        watcher.EnableRaisingEvents = true;
+
+        _watchers.Add(watcher);
+
+        _logger.LogInformation(
+            "Watching category: {Path}",
+            categoryPath);
+    }
+
+    private void OnCreated(
+        object sender,
+        FileSystemEventArgs e)
+    {
+        try
+        {
+            _logger.LogInformation(
+                "New item detected: {Path}",
+                e.FullPath);
+
+            // אנחנו מתעניינים רק בקובץ ה-Done
+            if (!IsDoneFile(e.FullPath))
+            {
+                return;
+            }
+
+            _logger.LogInformation(
+                "Done file detected: {Path}",
+                e.FullPath);
+
+            // התיקייה שמכילה את קובץ ה-Done
+            var alertDirectory =
+                Path.GetDirectoryName(e.FullPath);
+
+            if (alertDirectory == null)
+            {
+                return;
+            }
+
+            // מעבירים את התיקייה ל-Processor
+            _alertProcessor.ProcessAsync(alertDirectory);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error processing file: {Path}",
+                e.FullPath);
+        }
+    }
+
+    private bool IsDoneFile(string path)
+    {
+        var fileName =
+            Path.GetFileName(path);
+
+        // כאן נחליף לשם האמיתי
+        // של קובץ הסימון שלך.
+        return fileName.Equals(
+            "done",
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void OnError(
+        object sender,
+        ErrorEventArgs e)
+    {
+        _logger.LogError(
+            e.GetException(),
+            "FileSystemWatcher error.");
+    }
+
+    public void Stop()
+    {
+        _logger.LogInformation(
+            "Stopping Weather File Watchers...");
+
+        foreach (var watcher in _watchers)
+        {
+            watcher.EnableRaisingEvents = false;
+
+            watcher.Created -= OnCreated;
+            watcher.Error -= OnError;
+
+            watcher.Dispose();
+        }
+
+        _watchers.Clear();
+    }
+}
+
+יש פה נקודה **חשובה מאוד**: שמתי בכוונה `IncludeSubdirectories = true`.
+
+לכן אם יש:
+
+```text
+C:\Weather
+│
+├── Category1
+│   ├── Alert1
+│   │   ├── alert.json
+│   │   └── done
+│   │
+│   └── Alert2
+│       ├── alert.json
+│       └── done
+│
+├── Category2
+├── Category3
+└── Category4
+
+ה־Watcher שיושב על "Category1" יראה גם:
+
+Category1\Alert1\alert.json
+Category1\Alert1\done
+Category1\Alert2\alert.json
+Category1\Alert2\done
+
+אבל אנחנו מתעלמים מה־JSON ומגיבים רק ל־"done".
+
+אבל יש פה שיפור שאני כן רוצה לעשות
+
+בפועל אני לא הייתי משאיר:
+
+_alertProcessor.ProcessAsync(alertDirectory);
+
+בתוך "OnCreated", כי "OnCreated" הוא event handler ולא "async".
+
+עדיף שנבנה את זה עם תור ("Channel") או לכל הפחות נעטוף נכון את העבודה האסינכרונית.
+
+וגם יש לנו עוד בעיה חשובה:
+
+done נוצר
+   ↓
+Watcher מזהה
+   ↓
+ProcessAsync()
+   ↓
+קוראים JSON
+
+יכול להיות שה־JSON עדיין נעול לשבריר שנייה. לכן "AlertProcessor" צריך לעשות retry עד שהקובץ באמת זמין.
+
+אם אתה רוצה לבנות את זה נכון לפרויקט אמיתי, השלב הבא מבחינתי הוא:
+
+"AlertProcessor.cs" → מקבל את תיקיית ההתראה → מוצא את ה־JSON → מחכה שהקובץ יהיה זמין → קורא אותו → Deserialize → מעביר ל־KafkaProducer.
